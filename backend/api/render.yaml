@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: smashly-api
+    env: node
+    region: frankfurt # Cambia a oregon, singapore, etc. según tu ubicación
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # Las siguientes variables debes agregarlas manualmente en el dashboard de Render
+      # - FRONTEND_URL
+      # - SUPABASE_URL
+      # - SUPABASE_ANON_KEY o SUPABASE_SERVICE_ROLE_KEY
+      # - JWT_SECRET (opcional)
+      # - GEMINI_API_KEY (opcional)
+    healthCheckPath: /api/v1/health
