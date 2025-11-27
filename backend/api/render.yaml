@@ -14,6 +14,8 @@ services:
         value: 10000
       - key: NPM_CONFIG_PRODUCTION
         value: false
+      - key: SKIP_YARN_COREPACK
+        value: true
       # Las siguientes variables debes agregarlas manualmente en el dashboard de Render
       # - FRONTEND_URL
       # - SUPABASE_URL
