@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { FiMail, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { getApiUrl, API_CONFIG } from '../../config/api';
 
 interface NewsletterFormProps {
   variant?: 'hero' | 'footer';
@@ -204,8 +205,7 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
     setLoading(true);
 
     try {
-      // TODO: Replace with actual API call
-      const response = await fetch('/api/newsletter/subscribe', {
+      const response = await fetch(getApiUrl(API_CONFIG.endpoints.newsletter.subscribe), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
