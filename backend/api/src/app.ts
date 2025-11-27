@@ -50,17 +50,30 @@ app.use(
 );
 
 // CORS configuration
+const corsOrigins =
+  process.env.NODE_ENV === 'production'
+    ? process.env.FRONTEND_URL?.split(',').map(url => url.trim()) || []
+    : [
+        'http://localhost:443',
+        'http://localhost:5173',
+        'https://localhost:443',
+        'https://localhost:5173',
+      ];
+
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL
-        : [
-            'http://localhost:443',
-            'http://localhost:5173',
-            'https://localhost:443',
-            'https://localhost:5173',
-          ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+
+      // Check if origin is allowed
+      if (corsOrigins.length === 0 || corsOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        logger.warn(`CORS blocked request from origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
