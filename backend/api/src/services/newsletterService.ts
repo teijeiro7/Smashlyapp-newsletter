@@ -1,0 +1,214 @@
+import { supabase } from '../config/supabase';
+import logger from '../config/logger';
+
+export interface SubscribeResult {
+  success: boolean;
+  message: string;
+  alreadySubscribed: boolean;
+}
+
+export interface NewsletterStats {
+  totalSubscribers: number;
+  activeSubscribers: number;
+  unsubscribed: number;
+  recentSubscriptions: number; // Last 7 days
+}
+
+export class NewsletterService {
+  /**
+   * Subscribe an email to the newsletter
+   */
+  static async subscribe(
+    email: string,
+    ipAddress: string,
+    userAgent: string
+  ): Promise<SubscribeResult> {
+    // Validate email format
+    if (!this.isValidEmail(email)) {
+      throw new Error('Invalid email format');
+    }
+
+    // Normalize email (lowercase, trim)
+    const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+      // Check if email already exists
+      const { data: existingSubscriber, error: fetchError } = await supabase
+        .from('newsletter_subscribers')
+        .select('id, unsubscribed_at')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      if (fetchError) {
+        logger.error('Error checking existing subscriber:', fetchError);
+        throw new Error('Failed to check subscription status');
+      }
+
+      if (existingSubscriber) {
+        // If previously unsubscribed, resubscribe
+        if (existingSubscriber.unsubscribed_at) {
+          const { error: updateError } = await supabase
+            .from('newsletter_subscribers')
+            .update({
+              unsubscribed_at: null,
+              subscribed_at: new Date().toISOString(),
+              confirmed: false,
+            })
+            .eq('id', existingSubscriber.id);
+
+          if (updateError) {
+            logger.error('Error resubscribing:', updateError);
+            throw new Error('Failed to resubscribe');
+          }
+
+          return {
+            success: true,
+            message: 'Successfully resubscribed to newsletter',
+            alreadySubscribed: false,
+          };
+        }
+
+        // Already subscribed and active
+        return {
+          success: true,
+          message: 'Email is already subscribed',
+          alreadySubscribed: true,
+        };
+      }
+
+      // Insert new subscriber
+      const { error: insertError } = await supabase
+        .from('newsletter_subscribers')
+        .insert([
+          {
+            email: normalizedEmail,
+            ip_address: ipAddress,
+            user_agent: userAgent,
+          },
+        ]);
+
+      if (insertError) {
+        logger.error('Error inserting subscriber:', insertError);
+        throw new Error('Failed to subscribe to newsletter');
+      }
+
+      return {
+        success: true,
+        message: 'Successfully subscribed to newsletter',
+        alreadySubscribed: false,
+      };
+    } catch (error: any) {
+      logger.error('Newsletter subscription error:', error);
+      throw new Error('Failed to subscribe to newsletter');
+    }
+  }
+
+  /**
+   * Unsubscribe an email from the newsletter
+   */
+  static async unsubscribe(email: string): Promise<void> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+      const { data, error } = await supabase
+        .from('newsletter_subscribers')
+        .update({ unsubscribed_at: new Date().toISOString() })
+        .eq('email', normalizedEmail)
+        .is('unsubscribed_at', null)
+        .select();
+
+      if (error) {
+        logger.error('Newsletter unsubscribe error:', error);
+        throw new Error('Failed to unsubscribe from newsletter');
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('Email not found or already unsubscribed');
+      }
+    } catch (error: any) {
+      logger.error('Newsletter unsubscribe error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get newsletter statistics
+   */
+  static async getStats(): Promise<NewsletterStats> {
+    try {
+      // Get total subscribers
+      const { count: total, error: totalError } = await supabase
+        .from('newsletter_subscribers')
+        .select('*', { count: 'exact', head: true });
+
+      // Get active subscribers
+      const { count: active, error: activeError } = await supabase
+        .from('newsletter_subscribers')
+        .select('*', { count: 'exact', head: true })
+        .is('unsubscribed_at', null);
+
+      // Get unsubscribed
+      const { count: unsubscribed, error: unsubscribedError } = await supabase
+        .from('newsletter_subscribers')
+        .select('*', { count: 'exact', head: true })
+        .not('unsubscribed_at', 'is', null);
+
+      // Get recent subscriptions (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { count: recent, error: recentError } = await supabase
+        .from('newsletter_subscribers')
+        .select('*', { count: 'exact', head: true })
+        .gte('subscribed_at', sevenDaysAgo.toISOString())
+        .is('unsubscribed_at', null);
+
+      if (totalError || activeError || unsubscribedError || recentError) {
+        logger.error('Error fetching newsletter stats');
+        throw new Error('Failed to fetch newsletter stats');
+      }
+
+      return {
+        totalSubscribers: total || 0,
+        activeSubscribers: active || 0,
+        unsubscribed: unsubscribed || 0,
+        recentSubscriptions: recent || 0,
+      };
+    } catch (error: any) {
+      logger.error('Newsletter stats error:', error);
+      throw new Error('Failed to fetch newsletter stats');
+    }
+  }
+
+  /**
+   * Validate email format
+   */
+  private static isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  /**
+   * Get all active subscribers (for email campaigns)
+   */
+  static async getActiveSubscribers(): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('newsletter_subscribers')
+        .select('email')
+        .is('unsubscribed_at', null)
+        .eq('confirmed', true)
+        .order('subscribed_at', { ascending: false });
+
+      if (error) {
+        logger.error('Get active subscribers error:', error);
+        throw new Error('Failed to fetch active subscribers');
+      }
+
+      return data?.map((row) => row.email) || [];
+    } catch (error: any) {
+      logger.error('Get active subscribers error:', error);
+      throw new Error('Failed to fetch active subscribers');
+    }
+  }
+}
