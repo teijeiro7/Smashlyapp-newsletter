@@ -67,6 +67,22 @@ logger.info(`CORS configured for origins: ${JSON.stringify(corsOrigins)}`);
 logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
 logger.info(`FRONTEND_URL: ${process.env.FRONTEND_URL}`);
 
+// Handle preflight requests explicitly
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+
+  if (!origin || corsOrigins.length === 0 || corsOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400'); // 24 hours
+    return res.status(204).send();
+  }
+
+  return res.status(403).send();
+});
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -98,6 +114,8 @@ app.use(
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   })
 );
 
