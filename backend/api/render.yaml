@@ -4,6 +4,7 @@ services:
     runtime: node
     region: frankfurt # Cambia a oregon, singapore, etc. según tu ubicación
     plan: free
+    rootDir: backend/api
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
