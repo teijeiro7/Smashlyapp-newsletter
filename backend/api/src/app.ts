@@ -52,7 +52,9 @@ app.use(
 // CORS configuration
 const corsOrigins =
   process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL?.split(',').map(url => url.trim()) || []
+    ? process.env.FRONTEND_URL?.split(',')
+        .map(url => url.trim())
+        .filter(Boolean) || []
     : [
         'http://localhost:443',
         'http://localhost:5173',
@@ -60,17 +62,36 @@ const corsOrigins =
         'https://localhost:5173',
       ];
 
+// Log CORS configuration on startup
+logger.info(`CORS configured for origins: ${JSON.stringify(corsOrigins)}`);
+logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
+logger.info(`FRONTEND_URL: ${process.env.FRONTEND_URL}`);
+
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, Postman)
-      if (!origin) return callback(null, true);
+      if (!origin) {
+        logger.info('CORS: Allowing request with no origin');
+        return callback(null, true);
+      }
+
+      // Log the incoming origin
+      logger.info(`CORS: Request from origin: ${origin}`);
 
       // Check if origin is allowed
-      if (corsOrigins.length === 0 || corsOrigins.includes(origin)) {
+      if (corsOrigins.length === 0) {
+        logger.warn('CORS: No origins configured, allowing all origins');
+        return callback(null, true);
+      }
+
+      if (corsOrigins.includes(origin)) {
+        logger.info(`CORS: Origin ${origin} is allowed`);
         callback(null, true);
       } else {
-        logger.warn(`CORS blocked request from origin: ${origin}`);
+        logger.warn(
+          `CORS: Origin ${origin} is NOT in allowed list: ${JSON.stringify(corsOrigins)}`
+        );
         callback(new Error('Not allowed by CORS'));
       }
     },
