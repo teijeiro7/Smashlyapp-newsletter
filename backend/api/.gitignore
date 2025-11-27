@@ -20,7 +20,8 @@ build/
 .tscache/
 
 # Logs
-logs
+logs/*.log
+!logs/.gitkeep
 *.log
 lerna-debug.log*
 

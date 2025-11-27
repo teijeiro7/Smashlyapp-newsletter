@@ -31,29 +31,34 @@ const format = winston.format.combine(
 );
 
 // Define which transports the logger must use to print out messages
-const transports: winston.transport[] = [
-  // Allow to print all the error level messages inside the error.log file
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
-  }),
-  // Allow to print all the messages inside the all.log file
-  new winston.transports.File({
-    filename: 'logs/all.log',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
-  }),
-];
+const transports: winston.transport[] = [];
 
-// Console logging only when not running tests
+// File transports only in development (not compatible with Vercel/serverless)
+if (process.env.NODE_ENV === 'development') {
+  transports.push(
+    // Allow to print all the error level messages inside the error.log file
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
+    }),
+    // Allow to print all the messages inside the all.log file
+    new winston.transports.File({
+      filename: 'logs/all.log',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
+    })
+  );
+}
+
+// Console logging (works in all environments including Vercel)
 if (process.env.NODE_ENV !== 'test') {
-  transports.unshift(
+  transports.push(
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
