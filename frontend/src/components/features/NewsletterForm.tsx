@@ -176,6 +176,7 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [loadingMessage, setLoadingMessage] = useState('Suscribiendo...');
 
   const validateEmail = (email: string): boolean => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -203,15 +204,29 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
     }
 
     setLoading(true);
+    setLoadingMessage('Conectando con el servidor...');
+
+    // Show "waking up" message after 5 seconds
+    const slowConnectionTimeout = setTimeout(() => {
+      setLoadingMessage('El servidor está despertando, esto puede tardar un momento...');
+    }, 5000);
 
     try {
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds timeout
+
       const response = await fetch(getApiUrl(API_CONFIG.endpoints.newsletter.subscribe), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+      clearTimeout(slowConnectionTimeout);
 
       if (!response.ok) {
         const data = await response.json();
@@ -227,11 +242,20 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
         onSuccess();
       }
     } catch (err: any) {
+      clearTimeout(slowConnectionTimeout);
+      
       console.error('Newsletter subscription error:', err);
-      setError(err.message || 'Error al suscribirse. Inténtalo de nuevo.');
-      toast.error('Error al suscribirse');
+      
+      if (err.name === 'AbortError') {
+        setError('La conexión tardó demasiado. Por favor, intenta de nuevo en unos segundos.');
+        toast.error('Timeout - Intenta de nuevo');
+      } else {
+        setError(err.message || 'Error al suscribirse. Inténtalo de nuevo.');
+        toast.error('Error al suscribirse');
+      }
     } finally {
       setLoading(false);
+      setLoadingMessage('Suscribiendo...');
     }
   };
 
@@ -270,7 +294,20 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
           disabled={loading}
           whileTap={{ scale: 0.98 }}
         >
-          {loading ? 'Suscribiendo...' : 'Suscribirme'}
+          {loading ? (
+            <>
+              <motion.span
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                style={{ display: 'inline-block' }}
+              >
+                ⏳
+              </motion.span>
+              {loadingMessage}
+            </>
+          ) : (
+            'Suscribirme'
+          )}
         </SubmitButton>
       </InputGroup>
 
