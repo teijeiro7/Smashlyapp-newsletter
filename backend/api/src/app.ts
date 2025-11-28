@@ -50,17 +50,27 @@ app.use(
 );
 
 // CORS configuration
+const frontendUrls = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',')
+      .map(url => url.trim())
+      .filter(Boolean)
+  : [];
+
+const localhostUrls = [
+  'http://localhost:443',
+  'http://localhost:5173',
+  'https://localhost:443',
+  'https://localhost:5173',
+];
+
+// In production, use only FRONTEND_URL
+// In development, use FRONTEND_URL if set, otherwise use localhost
 const corsOrigins =
   process.env.NODE_ENV === 'production'
-    ? process.env.FRONTEND_URL?.split(',')
-        .map(url => url.trim())
-        .filter(Boolean) || []
-    : [
-        'http://localhost:443',
-        'http://localhost:5173',
-        'https://localhost:443',
-        'https://localhost:5173',
-      ];
+    ? frontendUrls
+    : frontendUrls.length > 0
+    ? [...frontendUrls, ...localhostUrls]
+    : localhostUrls;
 
 // Log CORS configuration on startup
 logger.info(`CORS configured for origins: ${JSON.stringify(corsOrigins)}`);
