@@ -21,6 +21,10 @@ validateConfig();
 // Crear la aplicación Express
 const app = express();
 
+// Trust proxy - required when behind Render/Cloudflare
+// This allows Express to correctly identify client IPs from X-Forwarded-For header
+app.set('trust proxy', 1);
+
 // Middleware de seguridad
 app.use(
   helmet({
