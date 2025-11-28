@@ -70,8 +70,12 @@ logger.info(`FRONTEND_URL: ${process.env.FRONTEND_URL}`);
 // Handle preflight requests explicitly
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
+  
+  logger.info(`OPTIONS preflight request from origin: ${origin}`);
+  logger.info(`Allowed origins: ${JSON.stringify(corsOrigins)}`);
 
   if (!origin || corsOrigins.length === 0 || corsOrigins.includes(origin)) {
+    logger.info(`✅ CORS: Allowing preflight from ${origin}`);
     res.header('Access-Control-Allow-Origin', origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -80,7 +84,15 @@ app.options('*', (req, res) => {
     return res.status(204).send();
   }
 
-  return res.status(403).send();
+  // Even when rejecting, send CORS headers so browser can show proper error
+  logger.error(`❌ CORS: Rejecting preflight from ${origin}`);
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  return res.status(403).json({
+    error: 'CORS policy violation',
+    message: `Origin ${origin} is not allowed. Allowed origins: ${corsOrigins.join(', ')}`,
+  });
 });
 
 app.use(
