@@ -76,20 +76,27 @@ const corsOrigins =
     ? [...frontendUrls, ...localhostUrls]
     : localhostUrls;
 
-// Log CORS configuration on startup
-logger.info(`CORS configured for origins: ${JSON.stringify(corsOrigins)}`);
-logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
-logger.info(`FRONTEND_URL: ${process.env.FRONTEND_URL}`);
+// Log CORS configuration on startup (solo en desarrollo para reducir tiempo de arranque)
+if (process.env.NODE_ENV !== 'production') {
+  logger.info(`CORS configured for origins: ${JSON.stringify(corsOrigins)}`);
+  logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
+  logger.info(`FRONTEND_URL: ${process.env.FRONTEND_URL}`);
+}
 
 // Handle preflight requests explicitly
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
-  
-  logger.info(`OPTIONS preflight request from origin: ${origin}`);
-  logger.info(`Allowed origins: ${JSON.stringify(corsOrigins)}`);
+
+  // Solo log en desarrollo para reducir overhead
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info(`OPTIONS preflight request from origin: ${origin}`);
+    logger.info(`Allowed origins: ${JSON.stringify(corsOrigins)}`);
+  }
 
   if (!origin || corsOrigins.length === 0 || corsOrigins.includes(origin)) {
-    logger.info(`✅ CORS: Allowing preflight from ${origin}`);
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info(`✅ CORS: Allowing preflight from ${origin}`);
+    }
     res.header('Access-Control-Allow-Origin', origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -114,12 +121,16 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, Postman)
       if (!origin) {
-        logger.info('CORS: Allowing request with no origin');
+        if (process.env.NODE_ENV !== 'production') {
+          logger.info('CORS: Allowing request with no origin');
+        }
         return callback(null, true);
       }
 
-      // Log the incoming origin
-      logger.info(`CORS: Request from origin: ${origin}`);
+      // Log the incoming origin (solo en desarrollo)
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info(`CORS: Request from origin: ${origin}`);
+      }
 
       // Check if origin is allowed
       if (corsOrigins.length === 0) {
@@ -128,7 +139,9 @@ app.use(
       }
 
       if (corsOrigins.includes(origin)) {
-        logger.info(`CORS: Origin ${origin} is allowed`);
+        if (process.env.NODE_ENV !== 'production') {
+          logger.info(`CORS: Origin ${origin} is allowed`);
+        }
         callback(null, true);
       } else {
         logger.warn(
@@ -169,21 +182,25 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/newsletter', newsletterRoutes); // Rutas de newsletter
 
-// Swagger UI - servir OpenAPI spec desde docs/api-docs.yaml
-try {
-  // Apuntar a la carpeta docs en la raíz del proyecto (para GitHub Pages)
-  const swaggerPath = path.join(__dirname, '../../../docs/api-docs.yaml');
-  const swaggerDocument = YAML.load(swaggerPath);
+// Swagger UI - solo en desarrollo para reducir tiempo de arranque en producción
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    // Apuntar a la carpeta docs en la raíz del proyecto (para GitHub Pages)
+    const swaggerPath = path.join(__dirname, '../../../docs/api-docs.yaml');
+    const swaggerDocument = YAML.load(swaggerPath);
 
-  // UI en /api-docs
-  app.use('/api/v1/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    // UI en /api-docs
+    app.use('/api/v1/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-  // Spec JSON en /api-docs/spec
-  app.get('/api/v1/api-docs/spec', (req, res) => {
-    res.json(swaggerDocument);
-  });
-} catch (err) {
-  logger.warn('Swagger UI no iniciado: no se pudo cargar docs/api-docs.yaml', err);
+    // Spec JSON en /api-docs/spec
+    app.get('/api/v1/api-docs/spec', (req, res) => {
+      res.json(swaggerDocument);
+    });
+
+    logger.info('📚 Swagger UI disponible en /api/v1/api-docs');
+  } catch (err) {
+    logger.warn('Swagger UI no iniciado: no se pudo cargar docs/api-docs.yaml', err);
+  }
 }
 
 // Servir frontend estático (build de Vite) desde ../static si existe
