@@ -3,6 +3,9 @@
  * Professional HTML email template for newsletter welcome emails
  */
 
+import fs from 'fs';
+import path from 'path';
+
 export interface WelcomeEmailData {
   email: string;
   unsubscribeToken: string;
@@ -11,6 +14,26 @@ export interface WelcomeEmailData {
 
 export function generateWelcomeEmail(data: WelcomeEmailData): string {
   const { email, unsubscribeUrl } = data;
+
+  // Leer el logo y convertirlo a base64 para incrustarlo en el email
+  // Esto funciona en todos los clientes de correo sin necesidad de URLs externas
+  let logoDataUri = '';
+  try {
+    // Usar process.cwd() para obtener la raíz del proyecto
+    const logoPath = path.join(process.cwd(), '../../public/images/icons/smashly-icon.png');
+    console.log('Intentando cargar logo desde:', logoPath);
+    const logoBuffer = fs.readFileSync(logoPath);
+    const logoBase64 = logoBuffer.toString('base64');
+    logoDataUri = `data:image/png;base64,${logoBase64}`;
+    console.log('Logo cargado exitosamente, tamaño base64:', logoBase64.length);
+  } catch (error) {
+    console.error('Error loading logo:', error);
+    console.error(
+      'Ruta intentada:',
+      path.join(process.cwd(), '../../public/images/icons/smashly-icon.png')
+    );
+    // Si falla, usar un placeholder o continuar sin logo
+  }
 
   return `
 <!DOCTYPE html>
@@ -32,7 +55,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
             <td style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
               <!-- Logo -->
               <div style="margin-bottom: 20px;">
-                <img src="https://smashlyapp-api.onrender.com/images/icons/smashly-icon.png" alt="Smashly Logo" style="width: 80px; height: 80px; margin: 0 auto; display: block; border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);" />
+                <img src="${logoDataUri}" alt="Smashly Logo" style="width: 80px; height: 80px; margin: 0 auto; display: block; border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);" />
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
                 ¡Bienvenido a Smashly!
@@ -121,7 +144,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
               <p style="margin: 15px 0 0; color: #999999; font-size: 12px;">
                 <a href="https://www.instagram.com/smashly.app/" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Instagram</a> •
                 <a href="https://www.tiktok.com/@smashlyapp" style="color: #16a34a; text-decoration: none; margin: 0 8px;">TikTok</a> •
-                <a href="mailto:hello@smashly.app" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Email</a>
+                <a href="mailto:smashly.app.2025@gmail.com" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Email</a>
               </p>
             </td>
           </tr>
@@ -178,4 +201,3 @@ TikTok: https://www.tiktok.com/@smashlyapp
 Email: hello@smashly.app
   `.trim();
 }
-
