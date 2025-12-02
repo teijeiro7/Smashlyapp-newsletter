@@ -23,15 +23,23 @@ export class NewsletterService {
     ipAddress: string,
     userAgent: string
   ): Promise<SubscribeResult> {
+    console.log('\n🔷 [Service] NewsletterService.subscribe called');
+    console.log('📧 [Service] Email:', email);
+    console.log('📍 [Service] IP:', ipAddress);
+
     // Validate email format
     if (!this.isValidEmail(email)) {
+      console.log('❌ [Service] Invalid email format');
       throw new Error('Invalid email format');
     }
 
     // Normalize email (lowercase, trim)
     const normalizedEmail = email.toLowerCase().trim();
+    console.log('✅ [Service] Email normalized:', normalizedEmail);
 
     try {
+      console.log('🔍 [Service] Checking if email already exists in database...');
+
       // Check if email already exists
       const { data: existingSubscriber, error: fetchError } = await supabase
         .from('newsletter_subscribers')
@@ -40,13 +48,18 @@ export class NewsletterService {
         .maybeSingle();
 
       if (fetchError) {
+        console.error('❌ [Service] Error checking existing subscriber:', fetchError);
         logger.error('Error checking existing subscriber:', fetchError);
         throw new Error('Failed to check subscription status');
       }
 
+      console.log('📊 [Service] Existing subscriber check result:', existingSubscriber);
+
       if (existingSubscriber) {
         // If previously unsubscribed, resubscribe
         if (existingSubscriber.unsubscribed_at) {
+          console.log('🔄 [Service] Resubscribing previously unsubscribed email...');
+
           const { error: updateError } = await supabase
             .from('newsletter_subscribers')
             .update({
@@ -57,10 +70,12 @@ export class NewsletterService {
             .eq('id', existingSubscriber.id);
 
           if (updateError) {
+            console.error('❌ [Service] Error resubscribing:', updateError);
             logger.error('Error resubscribing:', updateError);
             throw new Error('Failed to resubscribe');
           }
 
+          console.log('✅ [Service] Successfully resubscribed');
           return {
             success: true,
             message: 'Successfully resubscribed to newsletter',
@@ -69,6 +84,7 @@ export class NewsletterService {
         }
 
         // Already subscribed and active
+        console.log('ℹ️ [Service] Email is already subscribed and active');
         return {
           success: true,
           message: 'Email is already subscribed',
@@ -91,16 +107,19 @@ export class NewsletterService {
         ]);
 
       if (insertError) {
+        console.error('❌ [Service] Error inserting subscriber:', insertError);
         logger.error('Error inserting subscriber:', insertError);
         throw new Error('Failed to subscribe to newsletter');
       }
 
+      console.log('✅ [Service] Successfully subscribed new email');
       return {
         success: true,
         message: 'Successfully subscribed to newsletter',
         alreadySubscribed: false,
       };
     } catch (error: any) {
+      console.error('❌ [Service] Newsletter subscription error:', error);
       logger.error('Newsletter subscription error:', error);
       throw new Error('Failed to subscribe to newsletter');
     }
@@ -159,7 +178,7 @@ export class NewsletterService {
       // Get recent subscriptions (last 7 days)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
+
       const { count: recent, error: recentError } = await supabase
         .from('newsletter_subscribers')
         .select('*', { count: 'exact', head: true })
@@ -265,7 +284,7 @@ export class NewsletterService {
         throw new Error('Failed to fetch active subscribers');
       }
 
-      return data?.map((row) => row.email) || [];
+      return data?.map(row => row.email) || [];
     } catch (error: any) {
       logger.error('Get active subscribers error:', error);
       throw new Error('Failed to fetch active subscribers');

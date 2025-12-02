@@ -176,6 +176,7 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [loadingMessage, setLoadingMessage] = useState('Suscribiendo...');
 
   const validateEmail = (email: string): boolean => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -186,37 +187,84 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
     e.preventDefault();
     setError('');
 
+    console.log('🔵 [Newsletter] Form submitted');
+    console.log('📧 [Newsletter] Email:', email);
+
     // Validations
     if (!email) {
+      console.log('❌ [Newsletter] Validation failed: No email');
       setError('Por favor, introduce tu email');
       return;
     }
 
     if (!validateEmail(email)) {
+      console.log('❌ [Newsletter] Validation failed: Invalid email format');
       setError('Por favor, introduce un email válido');
       return;
     }
 
     if (!accepted) {
+      console.log('❌ [Newsletter] Validation failed: Privacy policy not accepted');
       setError('Debes aceptar la política de privacidad');
       return;
     }
 
+    console.log('✅ [Newsletter] All validations passed');
+
     setLoading(true);
+    setLoadingMessage('Conectando con el servidor...');
+
+    const apiUrl = getApiUrl(API_CONFIG.endpoints.newsletter.subscribe);
+    console.log('🌐 [Newsletter] API URL:', apiUrl);
+    console.log('🌐 [Newsletter] Full endpoint:', API_CONFIG.endpoints.newsletter.subscribe);
+    console.log('🌐 [Newsletter] Base URL:', API_CONFIG.baseURL);
+
+    // Show "waking up" message after 5 seconds
+    const slowConnectionTimeout = setTimeout(() => {
+      console.log('⏰ [Newsletter] 5 seconds elapsed - showing "waking up" message');
+      setLoadingMessage('El servidor está despertando, esto puede tardar un momento...');
+    }, 5000);
+
+    const startTime = Date.now();
 
     try {
-      const response = await fetch(getApiUrl(API_CONFIG.endpoints.newsletter.subscribe), {
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('⏱️ [Newsletter] 90 second timeout reached - aborting request');
+        controller.abort();
+      }, 90000); // 90 seconds timeout
+
+      console.log('📤 [Newsletter] Sending POST request...');
+      console.log('📤 [Newsletter] Request body:', JSON.stringify({ email }));
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email }),
+        signal: controller.signal,
       });
+
+      const duration = Date.now() - startTime;
+      console.log(`⏱️ [Newsletter] Request completed in ${duration}ms`);
+
+      clearTimeout(timeoutId);
+      clearTimeout(slowConnectionTimeout);
+
+      console.log('📥 [Newsletter] Response status:', response.status);
+      console.log('📥 [Newsletter] Response ok:', response.ok);
+      console.log('📥 [Newsletter] Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const data = await response.json();
+        console.log('❌ [Newsletter] Response not OK. Data:', data);
         throw new Error(data.message || 'Error al suscribirse');
       }
+
+      const responseData = await response.json();
+      console.log('✅ [Newsletter] Success! Response data:', responseData);
 
       setSuccess(true);
       setEmail('');
@@ -224,14 +272,36 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
       toast.success('¡Suscripción exitosa! Revisa tu email.');
       
       if (onSuccess) {
+        console.log('🎉 [Newsletter] Calling onSuccess callback');
         onSuccess();
       }
     } catch (err: any) {
-      console.error('Newsletter subscription error:', err);
-      setError(err.message || 'Error al suscribirse. Inténtalo de nuevo.');
-      toast.error('Error al suscribirse');
+      clearTimeout(slowConnectionTimeout);
+      
+      const duration = Date.now() - startTime;
+      console.log(`❌ [Newsletter] Error after ${duration}ms`);
+      console.error('❌ [Newsletter] Error details:', err);
+      console.error('❌ [Newsletter] Error name:', err.name);
+      console.error('❌ [Newsletter] Error message:', err.message);
+      console.error('❌ [Newsletter] Error stack:', err.stack);
+      
+      if (err.name === 'AbortError') {
+        console.log('⏱️ [Newsletter] Request aborted due to timeout');
+        setError('La conexión tardó demasiado. Por favor, intenta de nuevo en unos segundos.');
+        toast.error('Timeout - Intenta de nuevo');
+      } else if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+        console.log('🌐 [Newsletter] Network error - possibly CORS or network issue');
+        setError('Error de conexión. Verifica tu conexión a internet o intenta más tarde.');
+        toast.error('Error de conexión');
+      } else {
+        console.log('❌ [Newsletter] Other error type');
+        setError(err.message || 'Error al suscribirse. Inténtalo de nuevo.');
+        toast.error('Error al suscribirse');
+      }
     } finally {
       setLoading(false);
+      setLoadingMessage('Suscribiendo...');
+      console.log('🔚 [Newsletter] Request flow completed');
     }
   };
 
@@ -270,7 +340,20 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({ variant = 'hero', onSuc
           disabled={loading}
           whileTap={{ scale: 0.98 }}
         >
-          {loading ? 'Suscribiendo...' : 'Suscribirme'}
+          {loading ? (
+            <>
+              <motion.span
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                style={{ display: 'inline-block' }}
+              >
+                ⏳
+              </motion.span>
+              {loadingMessage}
+            </>
+          ) : (
+            'Suscribirme'
+          )}
         </SubmitButton>
       </InputGroup>
 
