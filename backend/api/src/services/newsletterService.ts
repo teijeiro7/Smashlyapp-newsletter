@@ -77,6 +77,8 @@ export class NewsletterService {
       }
 
       // Insert new subscriber
+      const unsubscribeToken = this.generateUnsubscribeToken();
+      
       const { error: insertError } = await supabase
         .from('newsletter_subscribers')
         .insert([
@@ -84,6 +86,7 @@ export class NewsletterService {
             email: normalizedEmail,
             ip_address: ipAddress,
             user_agent: userAgent,
+            unsubscribe_token: unsubscribeToken,
           },
         ]);
 
@@ -186,6 +189,63 @@ export class NewsletterService {
   private static isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  }
+
+  /**
+   * Generate unique unsubscribe token
+   */
+  private static generateUnsubscribeToken(): string {
+    // Generate a random token using crypto-safe method
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 15);
+    const randomPart2 = Math.random().toString(36).substring(2, 15);
+    return `${timestamp}-${randomPart}${randomPart2}`;
+  }
+
+  /**
+   * Unsubscribe by token (for email links)
+   */
+  static async unsubscribeByToken(token: string): Promise<{ email: string }> {
+    try {
+      // Find subscriber by token
+      const { data: subscriber, error: fetchError } = await supabase
+        .from('newsletter_subscribers')
+        .select('id, email, unsubscribed_at')
+        .eq('unsubscribe_token', token)
+        .maybeSingle();
+
+      if (fetchError) {
+        logger.error('Error fetching subscriber by token:', fetchError);
+        throw new Error('Invalid unsubscribe link');
+      }
+
+      if (!subscriber) {
+        throw new Error('Invalid unsubscribe link');
+      }
+
+      if (subscriber.unsubscribed_at) {
+        // Already unsubscribed
+        return { email: subscriber.email };
+      }
+
+      // Update subscriber to unsubscribed
+      const { error: updateError } = await supabase
+        .from('newsletter_subscribers')
+        .update({ unsubscribed_at: new Date().toISOString() })
+        .eq('id', subscriber.id);
+
+      if (updateError) {
+        logger.error('Error unsubscribing by token:', updateError);
+        throw new Error('Failed to unsubscribe');
+      }
+
+      logger.info(`Subscriber unsubscribed via token: ${subscriber.email}`);
+
+      return { email: subscriber.email };
+    } catch (error: any) {
+      logger.error('Unsubscribe by token error:', error);
+      throw error;
+    }
   }
 
   /**
