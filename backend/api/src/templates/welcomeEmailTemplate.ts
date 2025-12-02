@@ -19,18 +19,22 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
   // Esto funciona en todos los clientes de correo sin necesidad de URLs externas
   let logoDataUri = '';
   try {
-    // Usar process.cwd() para obtener la raíz del proyecto
-    const logoPath = path.join(process.cwd(), '../../public/images/icons/smashly-icon.png');
+    // En desarrollo: __dirname = /backend/api/src/templates
+    // En producción: __dirname = /backend/api/dist/templates
+    // Necesitamos ir a la raíz del proyecto y luego a public/images/icons/
+    const logoPath = path.join(__dirname, '../../../../public/images/icons/smashly-icon.png');
     console.log('Intentando cargar logo desde:', logoPath);
+    console.log('__dirname:', __dirname);
     const logoBuffer = fs.readFileSync(logoPath);
     const logoBase64 = logoBuffer.toString('base64');
     logoDataUri = `data:image/png;base64,${logoBase64}`;
     console.log('Logo cargado exitosamente, tamaño base64:', logoBase64.length);
   } catch (error) {
     console.error('Error loading logo:', error);
+    console.error('__dirname:', __dirname);
     console.error(
       'Ruta intentada:',
-      path.join(process.cwd(), '../../public/images/icons/smashly-icon.png')
+      path.join(__dirname, '../../../../public/images/icons/smashly-icon.png')
     );
     // Si falla, usar un placeholder o continuar sin logo
   }
