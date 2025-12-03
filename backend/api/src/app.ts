@@ -73,8 +73,8 @@ const corsOrigins =
   process.env.NODE_ENV === 'production'
     ? frontendUrls
     : frontendUrls.length > 0
-    ? [...frontendUrls, ...localhostUrls]
-    : localhostUrls;
+      ? [...frontendUrls, ...localhostUrls]
+      : localhostUrls;
 
 // Log CORS configuration on startup (solo en desarrollo para reducir tiempo de arranque)
 if (process.env.NODE_ENV !== 'production') {
@@ -201,6 +201,13 @@ if (process.env.NODE_ENV !== 'production') {
   } catch (err) {
     logger.warn('Swagger UI no iniciado: no se pudo cargar docs/api-docs.yaml', err);
   }
+}
+
+// Servir archivos públicos (imágenes, iconos, etc.) desde la carpeta public en la raíz del proyecto
+const publicDir = path.join(__dirname, '../../../public');
+if (fs.existsSync(publicDir)) {
+  app.use('/public', express.static(publicDir));
+  logger.info('📁 Serving public files from /public');
 }
 
 // Servir frontend estático (build de Vite) desde ../static si existe

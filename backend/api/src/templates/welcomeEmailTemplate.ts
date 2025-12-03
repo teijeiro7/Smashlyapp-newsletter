@@ -3,6 +3,9 @@
  * Professional HTML email template for newsletter welcome emails
  */
 
+import fs from 'fs';
+import path from 'path';
+
 export interface WelcomeEmailData {
   email: string;
   unsubscribeToken: string;
@@ -11,6 +14,30 @@ export interface WelcomeEmailData {
 
 export function generateWelcomeEmail(data: WelcomeEmailData): string {
   const { email, unsubscribeUrl } = data;
+
+  // Leer el logo y convertirlo a base64 para incrustarlo en el email
+  // Esto funciona en todos los clientes de correo sin necesidad de URLs externas
+  let logoDataUri = '';
+  try {
+    // En desarrollo: __dirname = /backend/api/src/templates
+    // En producción: __dirname = /backend/api/dist/templates
+    // Necesitamos ir a la raíz del proyecto y luego a public/images/icons/
+    const logoPath = path.join(__dirname, '../../../../public/images/icons/smashly-icon.png');
+    console.log('Intentando cargar logo desde:', logoPath);
+    console.log('__dirname:', __dirname);
+    const logoBuffer = fs.readFileSync(logoPath);
+    const logoBase64 = logoBuffer.toString('base64');
+    logoDataUri = `data:image/png;base64,${logoBase64}`;
+    console.log('Logo cargado exitosamente, tamaño base64:', logoBase64.length);
+  } catch (error) {
+    console.error('Error loading logo:', error);
+    console.error('__dirname:', __dirname);
+    console.error(
+      'Ruta intentada:',
+      path.join(__dirname, '../../../../public/images/icons/smashly-icon.png')
+    );
+    // Si falla, usar un placeholder o continuar sin logo
+  }
 
   return `
 <!DOCTYPE html>
@@ -121,7 +148,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
               <p style="margin: 15px 0 0; color: #999999; font-size: 12px;">
                 <a href="https://www.instagram.com/smashly.app/" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Instagram</a> •
                 <a href="https://www.tiktok.com/@smashlyapp" style="color: #16a34a; text-decoration: none; margin: 0 8px;">TikTok</a> •
-                <a href="mailto:hello@smashly.app" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Email</a>
+                <a href="mailto:smashly.app.2025@gmail.com" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Email</a>
               </p>
             </td>
           </tr>
@@ -178,4 +205,3 @@ TikTok: https://www.tiktok.com/@smashlyapp
 Email: hello@smashly.app
   `.trim();
 }
-

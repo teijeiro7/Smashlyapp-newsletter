@@ -5,6 +5,7 @@ export interface SubscribeResult {
   success: boolean;
   message: string;
   alreadySubscribed: boolean;
+  unsubscribeToken?: string;
 }
 
 export interface NewsletterStats {
@@ -43,7 +44,7 @@ export class NewsletterService {
       // Check if email already exists
       const { data: existingSubscriber, error: fetchError } = await supabase
         .from('newsletter_subscribers')
-        .select('id, unsubscribed_at')
+        .select('id, unsubscribed_at, unsubscribe_token')
         .eq('email', normalizedEmail)
         .maybeSingle();
 
@@ -80,6 +81,7 @@ export class NewsletterService {
             success: true,
             message: 'Successfully resubscribed to newsletter',
             alreadySubscribed: false,
+            unsubscribeToken: existingSubscriber.unsubscribe_token,
           };
         }
 
@@ -89,22 +91,21 @@ export class NewsletterService {
           success: true,
           message: 'Email is already subscribed',
           alreadySubscribed: true,
+          unsubscribeToken: existingSubscriber.unsubscribe_token,
         };
       }
 
       // Insert new subscriber
       const unsubscribeToken = this.generateUnsubscribeToken();
-      
-      const { error: insertError } = await supabase
-        .from('newsletter_subscribers')
-        .insert([
-          {
-            email: normalizedEmail,
-            ip_address: ipAddress,
-            user_agent: userAgent,
-            unsubscribe_token: unsubscribeToken,
-          },
-        ]);
+
+      const { error: insertError } = await supabase.from('newsletter_subscribers').insert([
+        {
+          email: normalizedEmail,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          unsubscribe_token: unsubscribeToken,
+        },
+      ]);
 
       if (insertError) {
         console.error('❌ [Service] Error inserting subscriber:', insertError);
@@ -117,6 +118,7 @@ export class NewsletterService {
         success: true,
         message: 'Successfully subscribed to newsletter',
         alreadySubscribed: false,
+        unsubscribeToken: unsubscribeToken,
       };
     } catch (error: any) {
       console.error('❌ [Service] Newsletter subscription error:', error);

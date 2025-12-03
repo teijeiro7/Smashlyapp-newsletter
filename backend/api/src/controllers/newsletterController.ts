@@ -48,10 +48,37 @@ export class NewsletterController {
       console.log(`✅ [Backend] Subscription successful in ${duration}ms`);
       console.log('📤 [Backend] Result:', result);
 
+      // Send welcome email directly (don't wait for webhook)
+      // Only send if it's a new subscription or resubscription (not already subscribed)
+      let emailSent = false;
+      let emailError = null;
+
+      if (!result.alreadySubscribed && result.unsubscribeToken) {
+        console.log('📧 [Backend] Sending welcome email...');
+        try {
+          const emailResult = await EmailService.sendWelcomeEmail(email, result.unsubscribeToken);
+
+          if (emailResult.success) {
+            console.log('✅ [Backend] Welcome email sent successfully');
+            emailSent = true;
+          } else {
+            console.error('❌ [Backend] Failed to send welcome email:', emailResult.error);
+            emailError = emailResult.error;
+          }
+        } catch (emailErr: any) {
+          console.error('❌ [Backend] Error sending welcome email:', emailErr);
+          emailError = emailErr.message;
+        }
+      } else {
+        console.log('ℹ️ [Backend] Skipping welcome email (already subscribed)');
+      }
+
       res.status(result.alreadySubscribed ? 200 : 201).json({
         success: true,
         message: result.message,
         alreadySubscribed: result.alreadySubscribed,
+        emailSent: emailSent,
+        emailError: emailError,
       });
     } catch (error: any) {
       const duration = Date.now() - startTime;
@@ -75,7 +102,7 @@ export class NewsletterController {
     try {
       // Verify webhook secret
       const webhookSecret = req.headers['x-webhook-secret'];
-      
+
       if (!process.env.SUPABASE_WEBHOOK_SECRET) {
         logger.warn('SUPABASE_WEBHOOK_SECRET not configured');
       } else if (webhookSecret !== process.env.SUPABASE_WEBHOOK_SECRET) {
@@ -96,14 +123,14 @@ export class NewsletterController {
         if (email && unsubscribe_token) {
           // Send welcome email asynchronously (don't block webhook response)
           EmailService.sendWelcomeEmail(email, unsubscribe_token)
-            .then((result) => {
+            .then(result => {
               if (result.success) {
                 logger.info(`Welcome email sent to ${email}`);
               } else {
                 logger.error(`Failed to send welcome email to ${email}: ${result.error}`);
               }
             })
-            .catch((error) => {
+            .catch(error => {
               logger.error('Error sending welcome email:', error);
             });
         }
