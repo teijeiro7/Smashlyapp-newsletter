@@ -32,7 +32,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
             <td style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
               <!-- Logo -->
               <div style="margin-bottom: 20px;">
-                <img src="https://smashlyapp-api.onrender.com/images/icons/smashly-icon.png" alt="Smashly Logo" style="width: 80px; height: 80px; margin: 0 auto; display: block; border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);" />
+                <img src="https://raw.githubusercontent.com/teijeiro7/Smashlyapp-newsletter/main/public/images/icons/smashly-icon.png" alt="Smashly Logo" style="width: 80px; height: 80px; margin: 0 auto; display: block; border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);" />
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
                 ¡Bienvenido a Smashly!
