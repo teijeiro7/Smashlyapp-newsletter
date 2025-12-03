@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import logger from '../config/logger';
 import {
   generateWelcomeEmail,
@@ -6,26 +6,8 @@ import {
   WelcomeEmailData,
 } from '../templates/welcomeEmailTemplate';
 
-// Create reusable transporter using Gmail SMTP
-const createTransporter = () => {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    logger.warn('Gmail credentials not configured. Email sending will fail.');
-    return null;
-  }
-
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-    tls: {
-      rejectUnauthorized: true,
-    },
-  });
-};
+// Initialize Resend client
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export interface SendEmailResult {
   success: boolean;
@@ -39,10 +21,8 @@ export class EmailService {
    */
   static async sendWelcomeEmail(email: string, unsubscribeToken: string): Promise<SendEmailResult> {
     try {
-      const transporter = createTransporter();
-
-      if (!transporter) {
-        logger.error('Email transporter not configured');
+      if (!process.env.RESEND_API_KEY) {
+        logger.error('Resend API key not configured');
         return {
           success: false,
           error: 'Email service not configured',
@@ -64,22 +44,31 @@ export class EmailService {
       const htmlContent = generateWelcomeEmail(emailData);
       const textContent = generateWelcomeEmailText(emailData);
 
-      // Send email via Nodemailer
-      const info = await transporter.sendMail({
-        from: `"Smashly" <${process.env.GMAIL_USER}>`,
+      // Send email via Resend
+      const { data, error } = await resend.emails.send({
+        from: 'Smashly <onboarding@resend.dev>',
+        replyTo: 'smashly.app.2025@gmail.com',
         to: email,
         subject: '¡Bienvenido a Smashly! 🎾',
         html: htmlContent,
         text: textContent,
       });
 
+      if (error) {
+        logger.error('Resend API error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to send email',
+        };
+      }
+
       logger.info(`Welcome email sent successfully to ${email}`, {
-        messageId: info.messageId,
+        messageId: data?.id,
       });
 
       return {
         success: true,
-        messageId: info.messageId,
+        messageId: data?.id,
       };
     } catch (error: any) {
       logger.error('Email service error:', error);
@@ -95,30 +84,37 @@ export class EmailService {
    */
   static async sendTestEmail(email: string): Promise<SendEmailResult> {
     try {
-      const transporter = createTransporter();
-
-      if (!transporter) {
+      if (!process.env.RESEND_API_KEY) {
         return {
           success: false,
           error: 'Email service not configured',
         };
       }
 
-      const info = await transporter.sendMail({
-        from: `"Smashly" <${process.env.GMAIL_USER}>`,
+      const { data, error } = await resend.emails.send({
+        from: 'Smashly <onboarding@resend.dev>',
+        replyTo: 'smashly.app.2025@gmail.com',
         to: email,
         subject: 'Test Email - Smashly',
         html: '<p>This is a test email from Smashly newsletter system.</p>',
         text: 'This is a test email from Smashly newsletter system.',
       });
 
+      if (error) {
+        logger.error('Test email error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to send test email',
+        };
+      }
+
       logger.info(`Test email sent successfully to ${email}`, {
-        messageId: info.messageId,
+        messageId: data?.id,
       });
 
       return {
         success: true,
-        messageId: info.messageId,
+        messageId: data?.id,
       };
     } catch (error: any) {
       logger.error('Test email error:', error);
