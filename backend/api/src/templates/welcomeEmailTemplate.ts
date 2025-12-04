@@ -121,7 +121,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
               <p style="margin: 15px 0 0; color: #999999; font-size: 12px;">
                 <a href="https://www.instagram.com/smashly.app/" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Instagram</a> •
                 <a href="https://www.tiktok.com/@smashlyapp" style="color: #16a34a; text-decoration: none; margin: 0 8px;">TikTok</a> •
-                <a href="mailto:smashly.app.2025@gmail.com" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Email</a>
+                <a href="mailto:info@smashly-app.es" style="color: #16a34a; text-decoration: none; margin: 0 8px;">Email</a>
               </p>
             </td>
           </tr>
@@ -175,6 +175,6 @@ Darse de baja: ${unsubscribeUrl}
 Síguenos:
 Instagram: https://www.instagram.com/smashly.app/
 TikTok: https://www.tiktok.com/@smashlyapp
-Email: hello@smashly.app
+Email: info@smashly-app.es
   `.trim();
 }

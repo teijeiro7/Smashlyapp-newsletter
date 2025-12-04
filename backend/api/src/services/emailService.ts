@@ -5,9 +5,13 @@ import {
   generateWelcomeEmailText,
   WelcomeEmailData,
 } from '../templates/welcomeEmailTemplate';
+import { BrevoEmailService } from './brevoEmailService';
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Email provider selection (default: brevo for free tier)
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'brevo';
 
 export interface SendEmailResult {
   success: boolean;
@@ -20,6 +24,13 @@ export class EmailService {
    * Send welcome email to new newsletter subscriber
    */
   static async sendWelcomeEmail(email: string, unsubscribeToken: string): Promise<SendEmailResult> {
+    // Use Brevo if configured, otherwise fall back to Resend
+    if (EMAIL_PROVIDER === 'brevo') {
+      logger.info('Using Brevo email service');
+      return BrevoEmailService.sendWelcomeEmail(email, unsubscribeToken);
+    }
+
+    // Resend implementation
     try {
       if (!process.env.RESEND_API_KEY) {
         logger.error('Resend API key not configured');
@@ -46,8 +57,8 @@ export class EmailService {
 
       // Send email via Resend
       const { data, error } = await resend.emails.send({
-        from: 'Smashly <onboarding@resend.dev>',
-        replyTo: 'smashly.app.2025@gmail.com',
+        from: 'Smashly <info@smashly-app.es>',
+        replyTo: 'info@smashly-app.es',
         to: email,
         subject: '¡Bienvenido a Smashly! 🎾',
         html: htmlContent,
@@ -83,6 +94,13 @@ export class EmailService {
    * Send test email (for debugging)
    */
   static async sendTestEmail(email: string): Promise<SendEmailResult> {
+    // Use Brevo if configured, otherwise fall back to Resend
+    if (EMAIL_PROVIDER === 'brevo') {
+      logger.info('Using Brevo email service for test');
+      return BrevoEmailService.sendTestEmail(email);
+    }
+
+    // Resend implementation
     try {
       if (!process.env.RESEND_API_KEY) {
         return {
@@ -92,8 +110,8 @@ export class EmailService {
       }
 
       const { data, error } = await resend.emails.send({
-        from: 'Smashly <onboarding@resend.dev>',
-        replyTo: 'smashly.app.2025@gmail.com',
+        from: 'Smashly <info@smashly-app.es>',
+        replyTo: 'info@smashly-app.es',
         to: email,
         subject: 'Test Email - Smashly',
         html: '<p>This is a test email from Smashly newsletter system.</p>',
