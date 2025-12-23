@@ -35,7 +35,7 @@
       "@assets/*": ["./src/assets/*"]
     }
   },
-  "include": ["src", "src/test/global.d.ts"],
+  "include": ["src", "api", "src/test/global.d.ts"],
   "exclude": ["src/__tests__/**"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
