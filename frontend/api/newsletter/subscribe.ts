@@ -7,12 +7,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { sendWelcomeEmail } from '../utils/emailService';
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // En producción, especifica tu dominio
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
 
 // Helper functions
 function validateEmail(email: string): boolean {
