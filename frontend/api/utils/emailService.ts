@@ -3,13 +3,7 @@
  * Sends emails using Brevo (Sendinblue) API
  */
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://smashlyapp-newsletter.vercel.app';
-
-if (!BREVO_API_KEY) {
-  console.warn('⚠️ BREVO_API_KEY not configured - emails will not be sent');
-}
 
 /**
  * Welcome email template
@@ -187,6 +181,10 @@ export async function sendWelcomeEmail(
   email: string,
   unsubscribeToken: string
 ): Promise<void> {
+  // Read environment variables inside function to avoid module-level crashes
+  const BREVO_API_KEY = process.env.BREVO_API_KEY;
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://smashlyapp-newsletter.vercel.app';
+
   if (!BREVO_API_KEY) {
     console.warn('⚠️ Skipping email send - BREVO_API_KEY not configured');
     return;
