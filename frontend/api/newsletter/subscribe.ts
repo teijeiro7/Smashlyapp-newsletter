@@ -5,8 +5,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-// Email service constants
-const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+
 
 
 
@@ -351,59 +350,60 @@ Email: info@smashly-app.es
   `.trim();
 }
 
+// Email service constants
+const RESEND_API_URL = 'https://api.resend.com/emails';
+
 /**
- * Send welcome email via Brevo
+ * Send welcome email via Resend
  */
 async function sendWelcomeEmail(
   email: string,
   unsubscribeToken: string
 ): Promise<void> {
+
   // Read environment variables inside function to avoid module-level crashes
-  const BREVO_API_KEY = process.env.BREVO_API_KEY;
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
   const FRONTEND_URL = process.env.FRONTEND_URL || 'https://smashlyapp-newsletter.vercel.app';
 
-  if (!BREVO_API_KEY) {
-    console.warn('⚠️ Skipping email send - BREVO_API_KEY not configured');
+  if (!RESEND_API_KEY) {
+    console.warn('⚠️ Skipping email send - RESEND_API_KEY not configured');
     return;
   }
 
   const unsubscribeUrl = `${FRONTEND_URL}/unsubscribe?token=${unsubscribeToken}`;
 
   const emailData = {
-    sender: {
-      name: 'Smashly',
-      email: 'info@smashly-app.es',
-    },
-    to: [
+    from: 'Smashly <info@smashly-app.es>',
+    to: [email],
+    subject: '¡Bienvenido a Smashly! 🎾',
+    html: generateWelcomeEmailHTML(email, unsubscribeUrl),
+    text: generateWelcomeEmailText(email, unsubscribeUrl),
+    tags: [
       {
-        email: email,
-        name: email.split('@')[0],
+        name: 'category',
+        value: 'welcome_newsletter',
       },
     ],
-    subject: '¡Bienvenido a Smashly! 🎾',
-    htmlContent: generateWelcomeEmailHTML(email, unsubscribeUrl),
-    textContent: generateWelcomeEmailText(email, unsubscribeUrl),
   };
 
   try {
-    const response = await fetch(BREVO_API_URL, {
+    const response = await fetch(RESEND_API_URL, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'api-key': BREVO_API_KEY,
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify(emailData),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('❌ Brevo API error:', errorData);
-      throw new Error(`Brevo API error: ${response.status}`);
+      console.error('❌ Resend API error:', errorData);
+      throw new Error(`Resend API error: ${response.status}`);
     }
 
     const result = await response.json();
-    console.log('✅ Welcome email sent successfully:', result.messageId);
+    console.log('✅ Welcome email sent successfully:', result.id);
   } catch (error) {
     console.error('❌ Error sending welcome email:', error);
     throw error;
