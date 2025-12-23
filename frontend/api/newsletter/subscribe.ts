@@ -184,7 +184,7 @@ export const config = {
 /**
  * Welcome email template
  */
-function generateWelcomeEmailHTML(email: string, unsubscribeUrl: string): string {
+function generateWelcomeEmailHTML(email: string, unsubscribeUrl: string, frontendUrl: string): string {
   return `
 <!DOCTYPE html>
 <html lang="es">
@@ -205,7 +205,7 @@ function generateWelcomeEmailHTML(email: string, unsubscribeUrl: string): string
             <td style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
               <!-- Logo -->
               <div style="margin-bottom: 20px;">
-                <img src="https://i.imgur.com/OibI6bi.png" alt="Smashly Logo" style="width: 80px; height: 80px; margin: 0 auto; display: block; border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);" />
+                <img src="${frontendUrl}/images/icons/smashly-icon.png" alt="Smashly Logo" style="width: 80px; height: 80px; margin: 0 auto; display: block; border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);" />
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
                 ¡Bienvenido a Smashly!
@@ -379,7 +379,7 @@ async function sendWelcomeEmail(
     from: 'Smashly <info@smashly-app.es>',
     to: [email],
     subject: '¡Bienvenido a Smashly! 🎾',
-    html: generateWelcomeEmailHTML(email, unsubscribeUrl),
+    html: generateWelcomeEmailHTML(email, unsubscribeUrl, FRONTEND_URL),
     text: generateWelcomeEmailText(email, unsubscribeUrl),
     tags: [
       {
