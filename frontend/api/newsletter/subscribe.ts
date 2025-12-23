@@ -362,13 +362,16 @@ async function sendWelcomeEmail(
 ): Promise<void> {
 
   // Read environment variables inside function to avoid module-level crashes
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim();
   const FRONTEND_URL = process.env.FRONTEND_URL || 'https://smashlyapp-newsletter.vercel.app';
 
   if (!RESEND_API_KEY) {
     console.warn('⚠️ Skipping email send - RESEND_API_KEY not configured');
     return;
   }
+
+  console.log(`🔑 Resend Key Configured: ${RESEND_API_KEY.substring(0, 3)}... (Length: ${RESEND_API_KEY.length})`);
+
 
   const unsubscribeUrl = `${FRONTEND_URL}/unsubscribe?token=${unsubscribeToken}`;
 
